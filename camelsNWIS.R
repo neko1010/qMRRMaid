@@ -7,6 +7,8 @@ library(ggpubr)
 library(trend)
 library(dataRetrieval)
 
+## REMOVE ALL EXTRANEOUS LINES !!!
+
 ### Process
 setwd('~/BSU/MRRMAid/qMetrics/')
 
