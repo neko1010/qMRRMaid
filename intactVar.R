@@ -6,7 +6,7 @@ library(lubridate)
 library(ggpubr)
 library(corrplot)
 
-setwd("BSU/MRRMAid/qMetrics/")
+#setwd("BSU/MRRMAid/qMetrics/")
 
 ## Calculate intactness and variability for each
 mrrmaid = read.csv("./data/camelsnarrowNFWeco500.csv")
@@ -167,3 +167,103 @@ ggHist = ggplot(metricsNAD83, aes(x = ecoregion)) +
              position = position_stack(vjust = 1))
 
 ggHist
+
+## mods
+library(brms)
+
+## bring in the soils
+soils = read.csv("./data/attributes/attributes_gageii_Soils.csv")
+soils = soils %>%
+  select(c("STAID", "CLAYAVE", "SILTAVE", "SANDAVE")) %>%
+  rename(gauge_d = STAID)
+
+df = left_join(camelSigs, soils, by= "gauge_d")
+
+## topo for slope
+topo = read.csv("./data/attributes/attributes_gageii_Topo.csv")
+topo = topo %>%
+  select("STAID", "SLOPE_PCT")%>%
+  rename(gauge_d = STAID)
+
+df = left_join(df, topo, by= "gauge_d")
+
+## Start with some simple ones
+## p_mean, frac_snow, AREA,aridity, Clay frac 
+
+## standardize the covs
+df$p_mean_std = scale(df$p_mean)
+df$frc_snw_std = scale(df$frc_snw)
+df$AREA_std = scale(df$AREA)
+df$aridity_std = scale(df$aridity)
+df$CLAYAVE_std = scale(df$CLAYAVE)
+df$SLOPE_std = scale(df$SLOPE_PCT)
+
+df$intact_std = scale(df$intact)
+df$CV_std = scale(df$CV)
+
+
+## Factor
+df$eco = factor(df$min)
+
+
+## need to rm baseflow = 0 for the beta OR add 0.000001
+df$baseflowTEST = df$baseflow + 0.000001
+
+## priors
+priorsBASE= get_prior(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std
+                        + aridity_std + CLAYAVE_std + intact_std + CV_std
+                        #+ (CV_std|eco) ## varying slopes
+                        + (1+ intact_std + CV_std|eco), ## varying slopes and intercepts
+                        data = df, family = 'beta')## the outcome is a proportion - bound bt 0 and 1
+
+priorsBASE$prior[1:8] = "normal (0,1)"
+priorsBASE$prior[15:17] = "normal (0,0.2)"
+
+
+## toy mod
+modBASE = brm(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std 
+           + aridity_std + CLAYAVE_std + intact_std + CV_std
+           + (1+ intact_std + CV_std|eco), ## varying slopes
+           data = df, 
+           family = Beta(),
+           prior = priorsBASE, ## nor priors - 0,1 for any fixed effects; 0.2 for random effects
+           control = list(adapt_delta = 0.999,max_treedepth = 15), ## lower to trial
+           cores=4,
+           chains = 4, ## lower to trial
+           iter=8000)## lower to trial
+
+summary(modBASE)
+plot(modBASE)
+pp_check(modBASE)
+r2BASE = bayes_R2(modBASE) ##0.3949 +- 0.0918 with AREA; 0.3127 +- 0.0819 w Slope 
+
+## FLASHINESS - these are all positive, so maybe a log-normal since it is left skewed - could be negative tho...
+## priors
+priorsFlash = get_prior(flashiness ~ p_mean_std + frc_snw_std + SLOPE_std 
+                       + aridity_std + CLAYAVE_std + intact_std + CV_std
+                       + (1+ intact_std + CV_std|eco), ## varying slopes
+                       #data = df, family = 'lognormal')
+                       data = df, family = 'beta') #testing...
+
+priorsFlash$prior[1:8] = "normal (0,1)"
+#priorsFlash$prior[14:16] = "normal (0,0.5)"
+priorsFlash$prior[15:17] = "normal (0,0.2)" ## for beta
+
+
+## toy mod
+modFlash = brm(flashiness ~ p_mean_std + frc_snw_std + SLOPE_std 
+          + aridity_std + CLAYAVE_std + intact_std + CV_std
+          + (1+ intact_std + CV_std|eco), ## varying slopes
+          data = df, 
+          #family = lognormal(),
+          family = Beta(),
+          prior = priorsFlash, ## nor priors - 0,1 for any fixed effects; 0.2 for random effects
+          control = list(adapt_delta = 0.999,max_treedepth = 15), ## lower to trial
+          cores=4,
+          chains = 4, ## lower to trial
+          iter=8000)## lower to trial
+
+summary(modFlash)
+plot(modFlash)
+pp_check(modFlash)
+r2Flash = bayes_R2(modFlash) ## 0.734 +- 0.148 lognormal; 0.8857 +- 0.0361 Beta; 0.8696 +- 0.0477 
