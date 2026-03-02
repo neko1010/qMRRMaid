@@ -190,6 +190,14 @@ topo = topo %>%
 
 df = left_join(df, topo, by= "gauge_d")
 
+
+## Filter for only Middle Rockies, Idaho Batholith, and Blue Mtns
+
+nMts = c("Middle Rockies", "Idaho Batholith", "Blue Mountains")
+df = df%>% 
+  filter(ecoregion %in% nMts)
+
+
 ## Start with some simple ones
 ## p_mean, frac_snow, AREA,aridity, Clay frac 
 
@@ -214,19 +222,19 @@ df$baseflowTEST = df$baseflow + 0.000001
 
 ## priors
 priorsBASE= get_prior(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std
-                        + aridity_std + CLAYAVE_std + intact_std + CV_std
+                        + aridity_std + CLAYAVE_std + intact_std + CV_std,
                         #+ (CV_std|eco) ## varying slopes
-                        + (1+ intact_std + CV_std|eco), ## varying slopes and intercepts
+                        #+ (1+ intact_std + CV_std|eco), ## varying slopes and intercepts
                         data = df, family = 'beta')## the outcome is a proportion - bound bt 0 and 1
 
 priorsBASE$prior[1:8] = "normal (0,1)"
-priorsBASE$prior[15:17] = "normal (0,0.2)"
+#priorsBASE$prior[15:17] = "normal (0,0.2)"
 
 
 ## toy mod
 modBASE = brm(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std 
-           + aridity_std + CLAYAVE_std + intact_std + CV_std
-           + (1+ intact_std + CV_std|eco), ## varying slopes
+           + aridity_std + CLAYAVE_std + intact_std + CV_std,
+           #+ (1+ intact_std + CV_std|eco), ## varying slopes
            data = df, 
            family = Beta(),
            prior = priorsBASE, ## nor priors - 0,1 for any fixed effects; 0.2 for random effects
@@ -238,25 +246,25 @@ modBASE = brm(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std
 summary(modBASE)
 plot(modBASE)
 pp_check(modBASE)
-r2BASE = bayes_R2(modBASE) ##0.3949 +- 0.0918 with AREA; 0.3127 +- 0.0819 w Slope 
+r2BASE = bayes_R2(modBASE) ##0.434 +-0.112
 
 ## FLASHINESS - these are all positive, so maybe a log-normal since it is right skewed - could be negative tho...
 ## priors
 priorsFlash = get_prior(flashiness ~ p_mean_std + frc_snw_std + SLOPE_std 
-                       + aridity_std + CLAYAVE_std + intact_std + CV_std
-                       + (1+ intact_std + CV_std|eco), ## varying slopes
+                       + aridity_std + CLAYAVE_std + intact_std + CV_std,
+                       #+ (1+ intact_std + CV_std|eco), ## varying slopes
                        data = df, family = 'lognormal')
                        #data = df, family = 'beta') #testing...
 
 priorsFlash$prior[1:8] = "normal (0,1)"
-priorsFlash$prior[14:16] = "normal (0,0.2)"
+#priorsFlash$prior[14:16] = "normal (0,0.2)"
 #priorsFlash$prior[15:17] = "normal (0,0.2)" ## for beta
 
 
 ## toy mod
 modFlash = brm(flashiness ~ p_mean_std + frc_snw_std + SLOPE_std 
-          + aridity_std + CLAYAVE_std + intact_std + CV_std
-          + (1+ intact_std + CV_std|eco), ## varying slopes
+          + aridity_std + CLAYAVE_std + intact_std + CV_std,
+          #+ (1+ intact_std + CV_std|eco), ## varying slopes
           data = df, 
           family = lognormal(),
           #family = Beta(),
@@ -269,7 +277,7 @@ modFlash = brm(flashiness ~ p_mean_std + frc_snw_std + SLOPE_std
 summary(modFlash)
 plot(modFlash)
 pp_check(modFlash)
-r2Flash = bayes_R2(modFlash) ## 0.734 +- 0.148 lognormal; 0.8857 +- 0.0361 Beta; 0.8696 +- 0.0477 
+r2Flash = bayes_R2(modFlash) ## 0.542 +- 0.126
 
 ## FLASHINESS wet season - these are all positive, so maybe a log-normal since it is right skewed - could be negative tho...
 ## Not a ton here AND fits worst of all
@@ -279,20 +287,20 @@ min(df$flashinessWet)
 
 ## priors
 priorsFlashWet = get_prior(flashinessWet ~ p_mean_std + frc_snw_std + SLOPE_std 
-                       + aridity_std + CLAYAVE_std + intact_std + CV_std
-                       + (1+ intact_std + CV_std|eco), ## varying slopes
+                       + aridity_std + CLAYAVE_std + intact_std + CV_std,
+                       #+ (1+ intact_std + CV_std|eco), ## varying slopes
                        data = df, family = 'lognormal')
                        #data = df, family = 'beta') #testing...
 
 priorsFlashWet$prior[1:8] = "normal (0,1)"
-priorsFlashWet$prior[14:16] = "normal (0,0.2)"
+#priorsFlashWet$prior[14:16] = "normal (0,0.2)"
 #priorsFlash$prior[15:17] = "normal (0,0.2)" ## for beta
 
 
 ## toy mod
 modFlashWet = brm(flashinessWet ~ p_mean_std + frc_snw_std + SLOPE_std 
-          + aridity_std + CLAYAVE_std + intact_std + CV_std
-          + (1+ intact_std + CV_std|eco), ## varying slopes
+          + aridity_std + CLAYAVE_std + intact_std + CV_std,
+          #+ (1+ intact_std + CV_std|eco), ## varying slopes
           data = df, 
           family = lognormal(),
           #family = Beta(),
@@ -305,7 +313,7 @@ modFlashWet = brm(flashinessWet ~ p_mean_std + frc_snw_std + SLOPE_std
 summary(modFlashWet)
 plot(modFlashWet)
 pp_check(modFlashWet)
-r2FlashWet= bayes_R2(modFlashWet) ##
+r2FlashWet= bayes_R2(modFlashWet) ##0.478 +- 0.103
 
 
 ## DryMonth/Area - these are all positive, so log-normal since it is right skewed 
@@ -313,19 +321,19 @@ r2FlashWet= bayes_R2(modFlashWet) ##
 hist(df$dryMonthArea)
 ## priors
 priorsDryArea = get_prior(dryMonthArea ~ p_mean_std + frc_snw_std + SLOPE_std 
-                        + aridity_std + CLAYAVE_std + intact_std + CV_std
-                        + (1+ intact_std + CV_std|eco), ## varying slopes
+                        + aridity_std + CLAYAVE_std + intact_std + CV_std,
+                        #+ (1+ intact_std + CV_std|eco), ## varying slopes
                         data = df, family = 'lognormal')
 #data = df, family = 'beta') #testing...
 
 priorsDryArea$prior[1:8] = "normal (0,1)"
-priorsDryArea$prior[14:16] = "normal (0,0.2)"
+#priorsDryArea$prior[14:16] = "normal (0,0.2)"
 
 
 ## toy mod
 modDryArea = brm(dryMonthArea ~ p_mean_std + frc_snw_std + SLOPE_std 
-               + aridity_std + CLAYAVE_std + intact_std + CV_std
-               + (1+ intact_std + CV_std|eco), ## varying slopes
+               + aridity_std + CLAYAVE_std + intact_std + CV_std,
+               #+ (1+ intact_std + CV_std|eco), ## varying slopes
                data = df, 
                family = lognormal(),
                #family = Beta(),
@@ -345,19 +353,19 @@ r2DryArea= bayes_R2(modDryArea)
 hist(df$max30area)
 ## priors
 priorsMax30 = get_prior(max30area ~ p_mean_std + frc_snw_std + SLOPE_std 
-                        + aridity_std + CLAYAVE_std + intact_std + CV_std
-                        + (1+ intact_std + CV_std|eco), ## varying slopes
+                        + aridity_std + CLAYAVE_std + intact_std + CV_std,
+                        #+ (1+ intact_std + CV_std|eco), ## varying slopes
                         data = df, family = 'lognormal')
 #data = df, family = 'beta') #testing...
 
 priorsMax30$prior[1:8] = "normal (0,1)"
-priorsMax30$prior[14:16] = "normal (0,0.2)"
+#priorsMax30$prior[14:16] = "normal (0,0.2)"
 
 
 ## toy mod
 modMax30 = brm(max30area ~ p_mean_std + frc_snw_std + SLOPE_std 
-               + aridity_std + CLAYAVE_std + intact_std + CV_std
-               + (1+ intact_std + CV_std|eco), ## varying slopes
+               + aridity_std + CLAYAVE_std + intact_std + CV_std,
+               #+ (1+ intact_std + CV_std|eco), ## varying slopes
                data = df, 
                family = lognormal(),
                #family = Beta(),
@@ -377,19 +385,19 @@ r2Max30= bayes_R2(modMax30)
 hist(df$q10q95area)
 ## priors
 priorsq10q95 = get_prior(q10q95area ~ p_mean_std + frc_snw_std + SLOPE_std 
-                        + aridity_std + CLAYAVE_std + intact_std + CV_std
-                        + (1+ intact_std + CV_std|eco), ## varying slopes
+                        + aridity_std + CLAYAVE_std + intact_std + CV_std,
+                        #+ (1+ intact_std + CV_std|eco), ## varying slopes
                         data = df, family = 'lognormal')
 #data = df, family = 'beta') #testing...
 
 priorsq10q95$prior[1:8] = "normal (0,1)"
-priorsq10q95$prior[14:16] = "normal (0,0.2)"
+#priorsq10q95$prior[14:16] = "normal (0,0.2)"
 
 
 ## toy mod
 modq10q95 = brm(q10q95area ~ p_mean_std + frc_snw_std + SLOPE_std 
-               + aridity_std + CLAYAVE_std + intact_std + CV_std
-               + (1+ intact_std + CV_std|eco), ## varying slopes
+               + aridity_std + CLAYAVE_std + intact_std + CV_std,
+               #+ (1+ intact_std + CV_std|eco), ## varying slopes
                data = df, 
                family = lognormal(),
                prior = priorsq10q95, ## nor priors - 0,1 for any fixed effects; 0.2 for random effects
