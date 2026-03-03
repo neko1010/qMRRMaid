@@ -35,15 +35,15 @@ mrrmaidNoJune = mrrmaidWide %>%
 
 mrrmaidWide = cbind(mrrmaidWide, juneMean, julyMean) %>%
   mutate(SD = if_else(julyMean>juneMean,
-                      apply(mrrmaidWide[,3:length(colnames(mrrmaidNoJune))], 1, sd),
-                      apply(mrrmaidWide[,3:length(colnames(mrrmaid))], 1, sd))) %>%
+                      apply(mrrmaidWide[,3:length(colnames(mrrmaidNoJune))], 1, sd, na.rm = TRUE),
+                      apply(mrrmaidWide[,3:length(colnames(mrrmaid))], 1, sd, na.rm = TRUE))) %>%
   mutate(meanTS = if_else(julyMean>juneMean,
-                          apply(mrrmaidWide[,3:length(colnames(mrrmaidNoJune))], 1, mean),
-                          apply(mrrmaidWide[,3:length(colnames(mrrmaid))], 1, mean))) %>%
+                          apply(mrrmaidWide[,3:length(colnames(mrrmaidNoJune))], 1, mean, na.rm = TRUE),
+                          apply(mrrmaidWide[,3:length(colnames(mrrmaid))], 1, mean, na.rm = TRUE))) %>%
   mutate(CV = SD/meanTS) %>% 
   mutate(intact = if_else(julyMean>juneMean,
-                              apply(mrrmaidWide %>%select(ends_with("08")), 1, mean),
-                              apply(mrrmaidWide %>%select(ends_with("09")), 1, mean)))
+                              apply(mrrmaidWide %>%select(ends_with("08")), 1, mean, na.rm = TRUE),
+                              apply(mrrmaidWide %>%select(ends_with("09")), 1, mean, na.rm = TRUE)))
 ## collate other covariates
 camels = left_join(mrrmaidWide, mrrmaid%>%select(-c(mesicProp, date, system.index)), by = "gauge_d")
 camels = unique(camels)
@@ -238,7 +238,7 @@ modBASE = brm(baseflowTEST ~ p_mean_std + frc_snw_std + SLOPE_std
 summary(modBASE)
 plot(modBASE)
 pp_check(modBASE)
-r2BASE = bayes_R2(modBASE) ##0.3949 +- 0.0918 with AREA; 0.3127 +- 0.0819 w Slope 
+r2BASE = bayes_R2(modBASE) ##0.3477 +- 0.0801
 
 ## FLASHINESS - these are all positive, so maybe a log-normal since it is right skewed - could be negative tho...
 ## priors
