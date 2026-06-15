@@ -228,37 +228,34 @@ df$CV_std = scale(df$CV)
 ## Factor
 df$eco = factor(df$mode)
 
+hist(df$baseflow)
+min(df$baseflow)
 
 ## need to rm baseflow = 0 for the beta OR add 0.000001
 df$baseflowTEST = df$baseflow + 0.000001
 
 ## priors
-priorsBASE= get_prior(baseflowTEST ~ ppt_std + snowfrac_std + slope_std
-#priorsBASE= get_prior(baseflow ~ ppt_std + snowfrac_std + slope_std
-                        + vpdmax_std + clay_std + intact_std + eli_tau_std
+priorsBASE= get_prior(baseflowTEST ~ snowfrac_std + clay_std + intact_std*eli_tau_std 
+#priorsBASE= get_prior(baseflowTEST ~ ppt_std + snowfrac_std + clay_std + intact_std*eli_tau_std 
                         #+ (CV_std|eco) ## varying slopes
-                         + (1+ intact_std + CV_std|eco), ## varying slopes and intercepts
-                        #data = df, family = 'beta')## the outcome is a proportion - bound bt 0 and 1
-                        #data = df, family = 'lognormal')## but also continuous and positive
+                         + (1+ intact_std|eco), ## varying slopes and intercepts
                         data = df, family = 'gamma')## but maybe not 'over'dispersed
 
-priorsBASE$prior[1:8] = "normal (0,1)"
+priorsBASE$prior[1:6] = "normal (0,1)"
 #priorsBASE$prior[15:17] = "normal (0,0.2)"
-priorsBASE$prior[13:16] = "normal (0,0.2)"
+priorsBASE$prior[11:13] = "normal (0,0.2)"
 
 
 ## toy mod
-modBASE = brm(baseflowTEST ~ ppt_std + snowfrac_std + slope_std 
-#modBASE = brm(baseflow~ ppt_std + snowfrac_std + slope_std 
-           + vpdmax_std + clay_std + intact_std + eli_tau_std
-           + (1+ intact_std + CV_std|eco), ## varying slopes
+modBASE = brm(baseflowTEST ~ snowfrac_std  + clay_std + intact_std*eli_tau_std 
+#modBASE = brm(baseflowTEST ~ ppt_std + snowfrac_std  + clay_std + intact_std*eli_tau_std 
+           + (1+ intact_std|eco), ## varying slopes
            data = df, 
-           #family = Beta(),
-           #family = lognormal(),
            family = Gamma(link="log"),
            prior = priorsBASE, ## nor priors - 0,1 for any fixed effects; 0.2 for random effects
            control = list(adapt_delta = 0.999,max_treedepth = 15), ## lower to trial
            cores=4,
+           seed = 77,
            chains = 4,
            init = 0.1,
            iter=8000)
@@ -266,24 +263,27 @@ modBASE = brm(baseflowTEST ~ ppt_std + snowfrac_std + slope_std
 summary(modBASE)
 plot(modBASE)
 pp_check(modBASE)
-r2BASE = bayes_R2(modBASE) ##0.3 beta 0.5 lognormal -try a gamma 0.374
+r2BASE = bayes_R2(modBASE) 
+baseCond = conditional_effects(modBASE, effects = "intact_std:eli_tau_std")
+baseCondPlot = plot(baseCond)
+
+hist(df$eli_tau_std)
 
 ## FLASHINESS - these are all positive, so maybe a log-normal since it is right skewed - could be negative tho...
 ## priors
 priorsFlash = get_prior(flashiness ~ ppt_std + snowfrac_std + slope_std 
-                       + vpdmax_std + clay_std + intact_std + CV_std
+                       + clay_std + intact_std*eli_tau_std + CV_std*eli_tau_std 
                        + (1+ intact_std + CV_std|eco), ## varying slopes
                        data = df, family = 'lognormal')
-                       #data = df, family = 'beta') #testing...
 
-priorsFlash$prior[1:8] = "normal (0,1)"
-priorsFlash$prior[14:16] = "normal (0,0.2)"
+priorsFlash$prior[1:10] = "normal (0,1)"
+priorsFlash$prior[15:18] = "normal (0,0.2)"
 #priorsFlash$prior[15:17] = "normal (0,0.2)" ## for beta
 
 
 ## toy mod
 modFlash = brm(flashiness ~ ppt_std + snowfrac_std + slope_std 
-          + vpdmax_std + clay_std + intact_std + CV_std
+          + clay_std + intact_std*eli_tau_std + CV_std*eli_tau_std
           + (1+ intact_std + CV_std|eco), ## varying slopes
           data = df, 
           family = lognormal(),
@@ -298,6 +298,9 @@ summary(modFlash)
 plot(modFlash)
 pp_check(modFlash)
 r2Flash = bayes_R2(modFlash) ## 0.734 +- 0.148 lognormal; 0.8857 +- 0.0361 Beta; 0.8696 +- 0.0477 
+flashCond= conditional_effects(modFlash, effects = c("intact_std:eli_tau_std", "CV_std:eli_tau_std"))
+
+flashCondPlot = plot(flashCond)
 
 ## FLASHINESS wet season - these are all positive, so maybe a log-normal since it is right skewed - could be negative tho...
 ## Not a ton here AND fits worst of all
