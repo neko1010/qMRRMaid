@@ -266,6 +266,7 @@ pp_check(modBASE)
 r2BASE = bayes_R2(modBASE) 
 baseCond = conditional_effects(modBASE, effects = "intact_std:eli_tau_std")
 baseCondPlot = plot(baseCond)
+baseCondPlot
 
 hist(df$eli_tau_std)
 
@@ -273,6 +274,7 @@ hist(df$eli_tau_std)
 ## priors
 priorsFlash = get_prior(flashiness ~ ppt_std + snowfrac_std + slope_std 
                        + clay_std + intact_std*eli_tau_std + CV_std*eli_tau_std 
+                       #+ clay_std + CV_std + intact_std * eli_tau_std 
                        + (1+ intact_std + CV_std|eco), ## varying slopes
                        data = df, family = 'lognormal')
 
@@ -284,6 +286,7 @@ priorsFlash$prior[15:18] = "normal (0,0.2)"
 ## toy mod
 modFlash = brm(flashiness ~ ppt_std + snowfrac_std + slope_std 
           + clay_std + intact_std*eli_tau_std + CV_std*eli_tau_std
+          #+ clay_std  + CV_std + intact_std * eli_tau_std #0.572
           + (1+ intact_std + CV_std|eco), ## varying slopes
           data = df, 
           family = lognormal(),
@@ -297,8 +300,8 @@ modFlash = brm(flashiness ~ ppt_std + snowfrac_std + slope_std
 summary(modFlash)
 plot(modFlash)
 pp_check(modFlash)
-r2Flash = bayes_R2(modFlash) ## 0.734 +- 0.148 lognormal; 0.8857 +- 0.0361 Beta; 0.8696 +- 0.0477 
-flashCond= conditional_effects(modFlash, effects = c("intact_std:eli_tau_std", "CV_std:eli_tau_std"))
+r2Flash = bayes_R2(modFlash) 
+flashCond= conditional_effects(modFlash)
 
 flashCondPlot = plot(flashCond)
 

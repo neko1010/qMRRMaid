@@ -3,12 +3,39 @@ library(sf)
 library(tidyr)
 library(ggplot2)
 library(lubridate)
+library(lfstat)
 
 ### Function to calculate each of the indices for describing hydrological
 ### signatures of catchments found in
 ### Vanderhoof et al. 2025 https://doi.org/10.1007/s11273-025-10066-z 
 
-calc_flash = function(qData){
+get_indices = function(qfile){
+  ## Load file
+  qData = read.csv(paste0("./output/q/", qfile)) 
+  ## fix wonky headings
+  hdngs = names(qData)
+  colnames(qData) = hdngs[2:length(hdngs)]
+  
+  ## Gage ID and huc info
+  gageID = as.numeric(strsplit(qData[1,]$monitoring_location_id, "-")[[1]][2])
+  print(paste0("GAGE ID: ", gageID))
+  
+  
+
+  
+  hucInfo = hucs %>%
+    filter(gage_num == gageID)
+  print(paste0("# of hucs : ", length(hucInfo)))
+  
+  hucInfo = first(hucInfo)
+  
+  ## Calculate the indices used in Vanderhoof et al. 2025 https://doi.org/10.1007/s11273-025-10066-z
+  
+  ## ALL FLOWS
+  ## Flashiness - The sum of the absolute value of the changes in discharge from 
+  ## the day prior to the current day (discharge t2—discharge t1)  
+  ## divided by the sum of the daily discharge values
+  
   q = qData$value
   indx = seq(2,length(q))
   
@@ -19,10 +46,11 @@ calc_flash = function(qData){
   absVal = sapply(indx, t2mint1)
   flashiness = sum(absVal, na.rm = T)/sum(q, na.rm = T)
   print(paste0("Flashiness: ", flashiness))
-  return(flashiness)
-}
-
-calc_flashWet = function(qData){
+  
+  ## HIGH FLOWS
+  ## Flashiness wet season - same as above but constrained to 3 months w highest Q
+  
+  ## create month col
   qData$month = month(qData$time)
   ## monthly means
   monthMeans = qData %>%
@@ -48,12 +76,14 @@ calc_flashWet = function(qData){
   absValWet = sapply(indxWet, t2mint1Wet)
   flashinessWet = sum(absValWet)/sum(qWet)
   print(paste0("Flashiness Wet: ", flashinessWet))
-  return(flashinessWet)
-}
+  
+  ## MAX30/area The flow rate for the 30 days per year with the highest flow rate, 
+  ## summed over the 30 days, and averaged per year, divided by the watershed area
 
-## Max30/area
-calc_max30 = function(qData, area){
-  qData$month = month(qData$time)
+
+  
+  ## get 30 days for each year w highest Q, sum them, average them
+  ## create year col
   qData$year = year(qData$time)
   ## annual highest 30 days
   ann30 = qData %>%
@@ -64,41 +94,41 @@ calc_max30 = function(qData, area){
   
   max30 = mean(ann30$sum30, na.rm = T)
   
-  max30area = max30/area ## need to change units? Currently cfs/km**2
+  max30area = max30/(hucInfo$AREA) ## need to change units? Currently cfs/m**2
   print(paste0("max30area: ", max30area))
-  return(max30area)
-}
-
-## (Q10-Q95)/AREA
-calc_q10q95area = function(qData, area){
-  q10 = quantile(qData$value, 0.90, na.rm = T)
-  q95 = quantile(qData$value, 0.05, na.rm = T)
-  q10q95area = (q10 -q95)/area
-  print(paste0("Q10-Q95/area: ", dryMonthArea))
-  return(q10q95area)
-}
-
-## Dry month/area
-calc_drymonthArea = function(qData, area){
-  qData$month = month(qData$time)
   
-  monthMeans = qData %>%
-    select(c(monitoring_location_id, time, value, month)) %>%
-    group_by(month) %>%
-    summarise(avg = mean(value))
+  ## (Q10-Q95)/area Discharge exceeded 10% of the time (Q10) minus discharge exceeded 
+  ## 95% of the time (Q95), divided by watershed area
+  
+  q10 = qData %>%
+    select(c(time, value, month, year)) %>%
+    group_by(year) %>%
+    filter(value > quantile(value, 0.90, na.rm = T)) %>%
+    summarize(sum10 = sum(value, na.rm = T))
+  
+  q95 = qData %>%
+    select(c(time, value, month, year)) %>%
+    group_by(year) %>%
+    filter(value < quantile(value, 0.05, na.rm = T)) %>%
+    summarize(sum95 = sum(value, na.rm = T))
+  
+  q10q95area = mean((q10$sum10-q95$sum95)/(hucInfo$AREA), na.rm = T) ## need to change units? Currently cfs/m**3
+  print(paste0("q10q95area: ", q10q95area))
+  
+  ## LOW FLOWS 
+  ## DryMonth/area - Average annual discharge in the driest month (excluding snow cover months) divided by watershed area
+  
+  ## driest month
   noSnow = monthMeans %>%
     filter(month %in% seq(4,10)) %>%## snow free
-    arrange(avg) ## sorted
+    arrange(avg)
   
-  dryMonthArea = noSnow$avg[1]/area  ## need to change units? Currently cfs/m**2
+  dryMonthArea = noSnow$avg[1]/hucInfo$AREA  ## need to change units? Currently cfs/m**2
   print(paste0("DryMonthArea: ", dryMonthArea))
-  return(dryMonthArea)
-}
-
-##Baseflow
-calc_baseflow = function(qData){
-  qData$month = month(qData$time)
-  qData$year = year(qData$time)
+  ## Baseflow index - The ratio of the average daily flow during the lowest annual
+  ## 7-day flow (excluding snow cover conditions) to the annual average daily flow
+  
+  ## annual lowest 7 days
   annBase = qData %>%
     select(c(time, value, month, year)) %>%
     filter(year < 2026) %>%
@@ -116,41 +146,10 @@ calc_baseflow = function(qData){
   
   baseflow = mean(annBase$mean7)/mean(ann$mean)
   print(paste0("Baseflow: ", baseflow))
-  return(baseflow)
-}
-
-get_indices = function(qfile){
-  ## Load file
-  qData = read.csv(paste0("./output/q/", qfile)) 
-  ## fix wonky headings
-  hdngs = names(qData)
-  colnames(qData) = hdngs[2:length(hdngs)]
-  
-  ## Gage ID and huc info
-  gageID = strsplit(qData[1,]$monitoring_location_id, "-")[[1]][2]
-  print(paste0("GAGE ID: ", gageID))
-  
-  huc= hucs %>%
-    filter(GAGE_ID == gageID)
-  print(paste0("# of hucs : ", length(huc)))
-  
-  hucInfo = first(huc)
-  area = hucInfo$AREA/1000000
-  
-  ## Signatures
-  flashiness = calc_flash(qData)
-  flashinessWet = calc_flashWet(qData)
-  max30area = calc_max30(qData,area)
-  dryMonthArea = calc_drymonthArea(qData, area)
-  q10q95area = calc_q10q95area(qData, area)
-  baseflow = calc_baseflow(qData)
-  
-  ## Calculate the indices used in Vanderhoof et al. 2025 https://doi.org/10.1007/s11273-025-10066-z
-  
+  ## vector to return
   return(c(gageID, flashiness, flashinessWet, max30area, q10q95area, dryMonthArea, baseflow))
 }
 
-### Calculate the indices
 setwd("~/BSU/MRRMAid/qMetrics/GAGES-II/")
 
 ## hucs for the function - read once
@@ -160,6 +159,7 @@ hucs
 
 hucs$gage_num = as.numeric(hucs$GAGE_ID)
 
+length(unique(hucs$GAGE_ID)) ## huc count 236
 ## list files
 nwis = list.files("./output/q/")
 nwisComplete = c()
@@ -173,8 +173,26 @@ for (f in nwis){
   }
 }
 ## 109 full
-
 sigs = lapply(nwisComplete, get_indices)
 outSigs = do.call(rbind, sigs)
 colnames(outSigs) = c("gageID", "flashiness", "flashinessWet", "max30area", "q10q95area", "dryMonthArea", "baseflow")
-write.csv(outSigs, "./output/indices_km2.csv")
+write.csv(outSigs, "./output/indices.csv")
+
+
+## LFSTAT STUFF
+library(dataRetrieval)
+test = read.csv("./output/q/10242000.csv")
+hdngs = names(test)
+colnames(test) = hdngs[2:length(hdngs)]
+## need a date object
+test$date = as.Date(test$time)
+
+
+test$base = baseflow(test$value)
+
+
+ggplot(test, aes(date, value)) +
+  geom_line() +
+  geom_line(aes(y = base, color = "red"))
+
+bfplot(test, year = "2016")
