@@ -10,6 +10,7 @@ library(tidybayes)
 library(stringr)
 library(forcats)
 library(ggspatial)
+library(geojsonsf)
 
 setwd("~/BSU/MRRMAid/qMetrics/GAGES-II")
 
@@ -247,6 +248,10 @@ eli = na.omit(eli) %>%
 
 df = left_join(gagesIIjoin, eli, by = "GAGE_ID")
 
+## Metrics SHP to write
+metricsELI = left_join(metricsSHP, eli, by = 'GAGE_ID')
+write_sf(metricsELI, "./output/metrics.shp")
+
 ## standardize the covs
 df$ppt_std = scale(df$ppt)
 df$snowfrac_std = scale(df$snowfrac)
@@ -269,17 +274,19 @@ min(df$baseflow)
 df$baseflowQ= df$baseflow + 0.000001
 
 ## priors
-priorsBASE= get_prior(baseflowQ~ snowfrac_std + clay_std + intact_std*eli_tau_std 
+#priorsBASE= get_prior(baseflowQ~ snowfrac_std + clay_std + intact_std*eli_tau_std 
+priorsBASE= get_prior(baseflowQ~ snowfrac_std + clay_std + slope_std + intact_std*eli_tau_std 
                         + (1|eco), 
                         data = df, family = 'beta')
 
 priorsBASE$prior[1:6] = "normal (0,1)"
-#priorsBASE$prior[12:14] = "normal (0,0.2)"
-priorsBASE$prior[10:11] = "normal (0,0.2)"
+priorsBASE$prior[11:12] = "normal (0,0.2)"
+#priorsBASE$prior[10:11] = "normal (0,0.2)"
 
 
 ## toy mod
-modBASE = brm(baseflowQ ~ snowfrac_std  + clay_std + intact_std*eli_tau_std 
+#modBASE = brm(baseflowQ ~ snowfrac_std  + clay_std + intact_std*eli_tau_std 
+modBASE = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std 
            #+ (1+ intact_std|eco), ## varying slopes
            + (1|eco), ## varying slopes
            data = df, 
@@ -304,6 +311,7 @@ baseMarg <- modBASE%>% #matched
          intercept = str_detect(.variable, "Intercept"))%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
@@ -336,17 +344,17 @@ baseCondPlot
 
 ## Compare with gamma
 ## priors
-priorsBASEgam= get_prior(baseflowQ ~ snowfrac_std + clay_std + intact_std*eli_tau_std 
+priorsBASEgam= get_prior(baseflowQ ~ snowfrac_std + clay_std + slope_std + intact_std*eli_tau_std 
                       #priorsBASE= get_prior(baseflowQ ~ ppt_std + snowfrac_std + clay_std + intact_std*eli_tau_std 
                       + (1|eco), 
                       #+ (1+ intact_std|eco), ## varying slopes and intercepts
                       data = df, family = 'gamma')
 
 priorsBASEgam$prior[1:6] = "normal (0,1)"
-#priorsBASE$prior[12:14] = "normal (0,0.2)"
-priorsBASEgam$prior[10:11] = "normal (0,0.2)"
+priorsBASEgam$prior[11:12] = "normal (0,0.2)"
+#priorsBASEgam$prior[10:11] = "normal (0,0.2)"
 
-modBASEgam = brm(baseflowQ ~ snowfrac_std  + clay_std + intact_std*eli_tau_std 
+modBASEgam = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std 
               #modBASE = brm(baseflowQ ~ ppt_std + snowfrac_std  + clay_std + intact_std*eli_tau_std 
               #+ (1+ intact_std|eco), ## varying slopes
               + (1|eco), ## varying slopes
@@ -367,17 +375,17 @@ summary(modBASEgam)
 ## Normal
 ## Compare with gamma
 ## priors
-priorsBASEnorm= get_prior(baseflowQ ~ snowfrac_std + clay_std + intact_std*eli_tau_std 
+priorsBASEnorm= get_prior(baseflowQ ~ snowfrac_std + clay_std + slope_std + intact_std*eli_tau_std 
                          #priorsBASE= get_prior(baseflowQ ~ ppt_std + snowfrac_std + clay_std + intact_std*eli_tau_std 
                          + (1|eco), 
                          #+ (1+ intact_std|eco), ## varying slopes and intercepts
                          data = df, family = 'normal')
 
 priorsBASEnorm$prior[1:6] = "normal (0,1)"
-#priorsBASE$prior[12:14] = "normal (0,0.2)"
-priorsBASEnorm$prior[10:11] = "normal (0,0.2)"
+priorsBASEnorm$prior[11:12] = "normal (0,0.2)"
+#priorsBASEnorm$prior[10:11] = "normal (0,0.2)"
 
-modBASEnorm = brm(baseflowQ ~ snowfrac_std  + clay_std + intact_std*eli_tau_std 
+modBASEnorm = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std 
                  #modBASE = brm(baseflowQ ~ ppt_std + snowfrac_std  + clay_std + intact_std*eli_tau_std 
                  #+ (1+ intact_std|eco), ## varying slopes
                  + (1|eco), ## varying slopes
@@ -416,18 +424,18 @@ summary(modBASEnorm)
 
 
 ## priors
-priorsBASEnoint = get_prior(baseflowQ ~ snowfrac_std + clay_std + intact_std + eli_tau_std 
+priorsBASEnoint = get_prior(baseflowQ ~ snowfrac_std + clay_std + slope_std + intact_std + eli_tau_std 
                         #+ (CV_std|eco) ## varying slopes
                          + (1|eco), 
                         data = df, family = 'beta')## but maybe not 'over'dispersed
 
 priorsBASEnoint$prior[1:5] = "normal (0,1)"
-#priorsBASE$prior[15:17] = "normal (0,0.2)"
-priorsBASEnoint$prior[9:10] = "normal (0,0.2)"
+priorsBASEnoint$prior[10:11] = "normal (0,0.2)"
+#priorsBASEnoint$prior[9:10] = "normal (0,0.2)"
 
 
 ## toy mod
-modBASEnoint = brm(baseflowQ ~ snowfrac_std  + clay_std + intact_std + eli_tau_std 
+modBASEnoint = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std + eli_tau_std 
            + (1|eco),
            data = df, 
            family = Beta(),
@@ -451,6 +459,7 @@ baseMargnoint <- modBASEnoint%>%
          intercept = str_detect(.variable, "Intercept"))%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
@@ -473,17 +482,16 @@ ggbaseNoInt = ggplot(baseMargnoint, aes(x = .value, y = fct_rev(name), fill = co
 hist(df$dryMonthArea)
 
 ## priors
-priorsDryArea = get_prior(dryMonthArea ~snowfrac_std  + clay_std + intact_std*eli_tau_std
+priorsDryArea = get_prior(dryMonthArea ~snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                           + (1|eco), ## varying slopes
                           data = df, family = 'gamma')
 #data = df, family = 'beta') #testing...
 
 priorsDryArea$prior[1:6] = "normal (0,1)"
-priorsDryArea$prior[9:11] = "normal (0,0.2)"
+priorsDryArea$prior[10:11] = "normal (0,0.2)"
 
 
-## toy mod
-modDryArea = brm(dryMonthArea ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+modDryArea = brm(dryMonthArea ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                  + (1|eco), ## varying slopes
                  data = df, 
                  family = Gamma(link = "log"),
@@ -512,6 +520,7 @@ dryAreaMarg <- modDryArea%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
@@ -536,7 +545,7 @@ ggDryArea = ggplot(dryAreaMarg, aes(x = .value, y = fct_rev(name), fill = compon
 hist(df$flashiness)
 
 ## priors
-priorsFlash = get_prior(flashiness ~snowfrac_std  + clay_std + intact_std*eli_tau_std
+priorsFlash = get_prior(flashiness ~snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                           + (1|eco), ## varying slopes
                           data = df, family = 'lognormal')
 
@@ -545,7 +554,7 @@ priorsFlash$prior[9:11] = "normal (0,0.2)"
 
 
 ## toy mod
-modFlash = brm(flashiness ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+modFlash = brm(flashiness ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                  + (1|eco), ## varying slopes
                  data = df, 
                  family = lognormal(),
@@ -574,6 +583,7 @@ flashMarg <- modFlash%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
@@ -598,7 +608,7 @@ ggflash = ggplot(flashMarg, aes(x = .value, y = fct_rev(name), fill = component)
 hist(df$flashinessWet)
 
 ## priors
-priorsFlashWet = get_prior(flashinessWet ~snowfrac_std  + clay_std + intact_std*eli_tau_std
+priorsFlashWet = get_prior(flashinessWet ~snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                         + (1|eco), ## varying slopes
                         data = df, family = 'lognormal')
 #data = df, family = 'beta') #testing...
@@ -608,7 +618,7 @@ priorsFlashWet$prior[9:11] = "normal (0,0.2)"
 
 
 ## toy mod
-modFlashWet = brm(flashinessWet ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+modFlashWet = brm(flashinessWet ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                + (1|eco), ## varying slopes
                data = df, 
                family = lognormal(),
@@ -637,6 +647,7 @@ flashWetMarg <- modFlashWet%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
@@ -661,7 +672,7 @@ hist(df$q10q95area)
 df$q10q95areaQ= df$q10q95area + 0.000001
 
 ## priors
-priorsq10q95 = get_prior(q10q95areaQ ~snowfrac_std  + clay_std + intact_std*eli_tau_std
+priorsq10q95 = get_prior(q10q95areaQ ~snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                          #+ (1+ intact_std|eco), ## varying slopes
                          + (1|eco),
                          data = df, family = 'lognormal') 
@@ -669,11 +680,11 @@ priorsq10q95 = get_prior(q10q95areaQ ~snowfrac_std  + clay_std + intact_std*eli_
 
 priorsq10q95$prior[1:6] = "normal (0,1)"
 #priorsq10q95$prior[11:13] = "normal (0,0.2)"
-priorsq10q95$prior[9:10] = "normal (0,0.2)"
+priorsq10q95$prior[9:11] = "normal (0,0.2)"
 
 
 ## toy mod
-modq10q95 = brm(q10q95areaQ ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+modq10q95 = brm(q10q95areaQ ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                 #+ (1+ intact_std|eco), ## varying slopes
                 + (1|eco), ## varying slopes
                 data = df, 
@@ -703,6 +714,7 @@ q10q95Marg <- modq10q95%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
@@ -724,7 +736,7 @@ ggq10q95 = ggplot(q10q95Marg, aes(x = .value, y = fct_rev(name), fill = componen
 ## Max30/Area
 hist(df$max30area)
 ## priors
-priorsMax30 = get_prior(max30area ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+priorsMax30 = get_prior(max30area ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                 + (1|eco), ## varying sloaes
                         data = df, family = 'lognormal')
 
@@ -733,7 +745,7 @@ priorsMax30$prior[9:11] = "normal (0,0.2)"
 
 
 ## toy mod
-modMax30 = brm(max30area ~ snowfrac_std  + clay_std + intact_std*eli_tau_std
+modMax30 = brm(max30area ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_tau_std
                + (1|eco), ## varying slopes
                data = df, 
                family = lognormal(),
@@ -762,6 +774,7 @@ max30Marg <- modMax30%>%
   mutate(name = case_when(
     #endsWith(.variable, "Intercept") ~ "Intercept",
     endsWith(.variable, "snowfrac_std") ~ "Snow fraction",
+    endsWith(.variable, "slope_std") ~ "Slope",
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
@@ -802,6 +815,33 @@ cond6 = ggarrange(baseCondPlot, dryAreaCondPlot, q10q95CondPlot, max30CondPlot,
 
 cond6
 
+## Only baseflow and Flashiness
+conds = list(eli_tau_std = c(-1,1))
+baseCondConcept = conditional_effects(modBASE, effects = "intact_std:eli_tau_std", int_conditions =conds , prob = 0.89)
+baseCondPlotConcept = plot(baseCondConcept)[[1]] +
+  xlab("Intactness") +
+  ylab("Baseflow") +
+  labs(color = "ELI", fill = "ELI")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "none")
+baseCondPlotConcept
+
+flashCondConcept = conditional_effects(modFlash, effects = "intact_std:eli_tau_std", int_conditions =conds , prob = 0.89)
+flashCondPlotConcept = plot(flashCondConcept)[[1]] +
+  xlab("Intactness") +
+  ylab("Flashiness") +
+  labs(color = "ELI", fill = "ELI")+
+  theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+flashCondPlotConcept
+
+concept = ggarrange(baseCondPlotConcept,flashCondPlotConcept,nrow =1, ncol =2)
+concept
 ##r2 table
 r2table = rbind(r2BASE, r2DryArea, r2q10q95, r2Max30, r2FlashWet, r2Flash)
 
