@@ -260,6 +260,7 @@ df$vpdmax_std = scale(df$vpdmax)
 df$clay_std = scale(df$clay)
 df$slope_std = scale(df$slope)
 df$eli_tau_std = scale(df$eli_tau)
+#df$eli_tau_std = df$eli_tau ## TESTING THIS - thinking ab interpretability
 
 df$intact_std = scale(df$intact)
 df$CV_std = scale(df$CV)
@@ -327,19 +328,17 @@ ggbase = ggplot(baseMarg, aes(x = .value, y = fct_rev(name), fill = component)) 
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Baseflow")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")
+  #ggtitle("Baseflow")
 
 baseCond = conditional_effects(modBASE, effects = "intact_std:eli_tau_std", prob = 0.89)
 baseCondPlot = plot(baseCond)[[1]] +
   xlab("Intactness") +
   ylab("Baseflow") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 baseCondPlot
-
-### Back transform the coeffs
-
-
 
 
 ## Compare with gamma
@@ -474,8 +473,8 @@ ggbaseNoInt = ggplot(baseMargnoint, aes(x = .value, y = fct_rev(name), fill = co
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Baseflow - no interaction")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+  #ggtitle("Baseflow - no interaction")
 
 ## DryMonth/Area - these are all positive, so log-normal since it is right skewed 
 
@@ -509,7 +508,9 @@ dryAreaCond= conditional_effects(modDryArea, effects = "intact_std:eli_tau_std",
 dryAreaCondPlot = plot(dryAreaCond)[[1]] +
   xlab("Intactness") +
   ylab("Dry Month/Area") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 dryAreaCondPlot
 
 ## Marginal effects plot
@@ -535,8 +536,8 @@ ggDryArea = ggplot(dryAreaMarg, aes(x = .value, y = fct_rev(name), fill = compon
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Dry month/Area")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+  #ggtitle("Dry month/Area")
 
 
 
@@ -572,7 +573,9 @@ flashCond= conditional_effects(modFlash, effects = "intact_std:eli_tau_std", pro
 flashCondPlot = plot(flashCond)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 flashCondPlot
 
 ## Marginal effects plot
@@ -599,8 +602,8 @@ ggflash = ggplot(flashMarg, aes(x = .value, y = fct_rev(name), fill = component)
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Flashiness")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+  #ggtitle("Flashiness")
 
 ### FLASHINESS WET ###
 
@@ -636,7 +639,9 @@ flashWetCond= conditional_effects(modFlashWet, effects = "intact_std:eli_tau_std
 flashWetCondPlot = plot(flashWetCond)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness Wet") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 flashWetCondPlot
 
 ## Marginal effects plot
@@ -663,8 +668,8 @@ ggflashwet = ggplot(flashWetMarg, aes(x = .value, y = fct_rev(name), fill = comp
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Flashiness wet")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+  #ggtitle("Flashiness wet")
 
 ## Q10-Q95/Area
 hist(df$q10q95area)
@@ -703,7 +708,9 @@ q10q95Cond= conditional_effects(modq10q95, effects = "intact_std:eli_tau_std", p
 q10q95CondPlot = plot(q10q95Cond)[[1]] +
   xlab("Intactness") +
   ylab("(Q10-Q95)/Area") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 q10q95CondPlot
 
 ## Marginal effects plot
@@ -730,8 +737,8 @@ ggq10q95 = ggplot(q10q95Marg, aes(x = .value, y = fct_rev(name), fill = componen
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("(Q10-Q95)/Area")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+ # ggtitle("(Q10-Q95)/Area")
 
 ## Max30/Area
 hist(df$max30area)
@@ -763,7 +770,9 @@ max30Cond= conditional_effects(modMax30, effects = "intact_std:eli_tau_std", pro
 max30CondPlot = plot(max30Cond)[[1]] +
   xlab("Intactness") +
   ylab("Max 30/Area") +
-  labs(color = "ELI", fill = "ELI")
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")
 max30CondPlot
 
 ## Marginal effects plot
@@ -790,8 +799,8 @@ ggmax30 = ggplot(max30Marg, aes(x = .value, y = fct_rev(name), fill = component)
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
-  facet_wrap(vars(component), ncol = 1, scales = "free_y")+
-  ggtitle("Max 30/Area")
+  facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
+  #ggtitle("Max 30/Area")
 
 
 ### Some six panel plots ###
@@ -821,7 +830,9 @@ baseCondConcept = conditional_effects(modBASE, effects = "intact_std:eli_tau_std
 baseCondPlotConcept = plot(baseCondConcept)[[1]] +
   xlab("Intactness") +
   ylab("Baseflow") +
-  labs(color = "ELI", fill = "ELI")+
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.text.y=element_blank(),
@@ -833,7 +844,9 @@ flashCondConcept = conditional_effects(modFlash, effects = "intact_std:eli_tau_s
 flashCondPlotConcept = plot(flashCondConcept)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness") +
-  labs(color = "ELI", fill = "ELI")+
+  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  labs(color = "Limitation", fill = "Limitation")+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.text.y=element_blank(),
@@ -842,6 +855,20 @@ flashCondPlotConcept
 
 concept = ggarrange(baseCondPlotConcept,flashCondPlotConcept,nrow =1, ncol =2)
 concept
+
+##### Marginal and conditional pairs #####
+## Dry
+dryplots = ggarrange(ggbase, baseCondPlot, ggDryArea, dryAreaCondPlot,  labels = c("A", "B","C", "D"))
+dryplots
+
+## Wet
+wetplots = ggarrange(ggq10q95, q10q95CondPlot, ggmax30, max30CondPlot,  labels = c("A", "B","C", "D"))
+wetplots
+
+## Flashiness
+flashplots = ggarrange(ggflash, flashCondPlot, labels = c("A", "B"))
+flashplots
+
 ##r2 table
 r2table = rbind(r2BASE, r2DryArea, r2q10q95, r2Max30, r2FlashWet, r2Flash)
 
