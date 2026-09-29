@@ -303,7 +303,7 @@ modBASE = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std*eli_
 summary(modBASE)
 #plot(modBASE)
 pp_check(modBASE)
-r2BASE = bayes_R2(modBASE) 
+r2BASE = bayes_R2(modBASE, probs = c(0.055, 0.945)) 
 
 ## Marginal effects plot
 baseMarg <- modBASE%>% #matched 
@@ -449,7 +449,7 @@ modBASEnoint = brm(baseflowQ ~ snowfrac_std  + clay_std + slope_std + intact_std
 summary(modBASEnoint)
 plot(modBASEnoint)
 
-r2modBASEnoint =bayes_R2(modBASEnoint)
+r2modBASEnoint =bayes_R2(modBASEnoint, probs = c(0.055, 0.945))
 
 ## Marginal effects plot
 baseMargnoint <- modBASEnoint%>% 
@@ -503,7 +503,7 @@ modDryArea = brm(dryMonthArea ~ snowfrac_std  + clay_std + slope_std + intact_st
 summary(modDryArea)
 #plot(modDryArea)
 pp_check(modDryArea)
-r2DryArea= bayes_R2(modDryArea)  
+r2DryArea= bayes_R2(modDryArea, probs = c(0.055, 0.945))  
 dryAreaCond= conditional_effects(modDryArea, effects = "intact_std:eli_tau_std", prob = 0.89)
 dryAreaCondPlot = plot(dryAreaCond)[[1]] +
   xlab("Intactness") +
@@ -568,7 +568,7 @@ modFlash = brm(flashiness ~ snowfrac_std  + clay_std + slope_std + intact_std*el
 summary(modFlash)
 #plot(modFlash)
 pp_check(modFlash)
-r2Flash= bayes_R2(modFlash)  
+r2Flash= bayes_R2(modFlash, probs = c(0.055, 0.945))  
 flashCond= conditional_effects(modFlash, effects = "intact_std:eli_tau_std", prob = 0.89)
 flashCondPlot = plot(flashCond)[[1]] +
   xlab("Intactness") +
@@ -634,7 +634,7 @@ modFlashWet = brm(flashinessWet ~ snowfrac_std  + clay_std + slope_std + intact_
 summary(modFlashWet)
 #plot(modFlashWet)
 pp_check(modFlashWet)
-r2FlashWet= bayes_R2(modFlashWet)  
+r2FlashWet= bayes_R2(modFlashWet, probs = c(0.055, 0.945))  
 flashWetCond= conditional_effects(modFlashWet, effects = "intact_std:eli_tau_std", prob = 0.89)
 flashWetCondPlot = plot(flashWetCond)[[1]] +
   xlab("Intactness") +
@@ -703,7 +703,7 @@ modq10q95 = brm(q10q95areaQ ~ snowfrac_std  + clay_std + slope_std + intact_std*
 summary(modq10q95)
 #plot(modq10q95)
 pp_check(modq10q95)
-r2q10q95= bayes_R2(modq10q95)  
+r2q10q95= bayes_R2(modq10q95, probs = c(0.055, 0.945))  
 q10q95Cond= conditional_effects(modq10q95, effects = "intact_std:eli_tau_std", prob = 0.89)
 q10q95CondPlot = plot(q10q95Cond)[[1]] +
   xlab("Intactness") +
@@ -765,7 +765,7 @@ modMax30 = brm(max30area ~ snowfrac_std  + clay_std + slope_std + intact_std*eli
 summary(modMax30)
 #plot(modMax30)
 pp_check(modMax30)
-r2Max30= bayes_R2(modMax30)
+r2Max30= bayes_R2(modMax30, probs = c(0.055, 0.945))
 max30Cond= conditional_effects(modMax30, effects = "intact_std:eli_tau_std", prob = 0.89)
 max30CondPlot = plot(max30Cond)[[1]] +
   xlab("Intactness") +
@@ -905,3 +905,27 @@ flashWetCond[[1]][298:300,]
 ##Flashiness 
 flashCond[[1]][1:3,]
 flashCond[[1]][298:300,]
+
+
+#### catchment eli stats
+
+dfFinal = df%>%filter(!is.na(juneMean) & !is.na(julyMean))
+
+neg = dfFinal %>% filter(eli_tau < 0)
+min = min(dfFinal$eli_tau) ## -0.28
+max = max(dfFinal$eli_tau) ## 0.59
+
+eliSD = sd(dfFinal$eli_tau)
+eliMean = mean(dfFinal$eli_tau)
+
+eliLow = eliMean - eliSD
+eliHigh = eliMean + eliSD
+
+dfFinal = dfFinal %>% 
+  mutate(eliCat = case_when(
+    eli_tau <= eliLow ~ "Energy",
+    eli_tau >= eliHigh ~ "Water",
+    eli_tau > eliLow & eli_tau < eliHigh ~ "Neutral"))
+
+table(dfFinal$ecoregion, dfFinal$eliCat)
+
