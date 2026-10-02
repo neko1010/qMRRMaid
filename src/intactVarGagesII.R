@@ -306,7 +306,7 @@ pp_check(modBASE)
 r2BASE = bayes_R2(modBASE, probs = c(0.055, 0.945)) 
 
 ## Marginal effects plot
-baseMarg <- modBASE%>% #matched 
+baseMarg <- modBASE%>%
   gather_draws(`b_.*`, regex = TRUE) %>% 
   mutate(component = ifelse(str_detect(.variable, "phi_"), "Precision", "Mean"),
          intercept = str_detect(.variable, "Intercept"))%>%
@@ -318,9 +318,11 @@ baseMarg <- modBASE%>% #matched
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  ## only color ELI and interaction
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
-ggbase = ggplot(baseMarg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggbase = ggplot(baseMarg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -328,15 +330,21 @@ ggbase = ggplot(baseMarg, aes(x = .value, y = fct_rev(name), fill = component)) 
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")
   #ggtitle("Baseflow")
+ggbase
+
+## colors to match the map
+cols = c("#D2A06F", "grey", "#6FA38A")
 
 baseCond = conditional_effects(modBASE, effects = "intact_std:eli_tau_std", prob = 0.89)
 baseCondPlot = plot(baseCond)[[1]] +
   xlab("Intactness") +
   ylab("Baseflow") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 baseCondPlot
 
@@ -463,9 +471,10 @@ baseMargnoint <- modBASEnoint%>%
     endsWith(.variable, "clay_std") ~ "Clay fraction", 
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
-ggbaseNoInt = ggplot(baseMargnoint, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggbaseNoInt = ggplot(baseMargnoint, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -508,8 +517,9 @@ dryAreaCond= conditional_effects(modDryArea, effects = "intact_std:eli_tau_std",
 dryAreaCondPlot = plot(dryAreaCond)[[1]] +
   xlab("Intactness") +
   ylab("Dry Month/Area") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 dryAreaCondPlot
 
@@ -526,9 +536,10 @@ dryAreaMarg <- modDryArea%>%
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
-ggDryArea = ggplot(dryAreaMarg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggDryArea = ggplot(dryAreaMarg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -536,6 +547,7 @@ ggDryArea = ggplot(dryAreaMarg, aes(x = .value, y = fct_rev(name), fill = compon
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
   #ggtitle("Dry month/Area")
 
@@ -573,8 +585,9 @@ flashCond= conditional_effects(modFlash, effects = "intact_std:eli_tau_std", pro
 flashCondPlot = plot(flashCond)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 flashCondPlot
 
@@ -591,10 +604,11 @@ flashMarg <- modFlash%>%
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
 
-ggflash = ggplot(flashMarg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggflash = ggplot(flashMarg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -602,6 +616,7 @@ ggflash = ggplot(flashMarg, aes(x = .value, y = fct_rev(name), fill = component)
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
   #ggtitle("Flashiness")
 
@@ -639,8 +654,9 @@ flashWetCond= conditional_effects(modFlashWet, effects = "intact_std:eli_tau_std
 flashWetCondPlot = plot(flashWetCond)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness Wet") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 flashWetCondPlot
 
@@ -657,10 +673,11 @@ flashWetMarg <- modFlashWet%>%
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
 
-ggflashwet = ggplot(flashWetMarg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggflashwet = ggplot(flashWetMarg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -668,6 +685,7 @@ ggflashwet = ggplot(flashWetMarg, aes(x = .value, y = fct_rev(name), fill = comp
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
   #ggtitle("Flashiness wet")
 
@@ -708,8 +726,9 @@ q10q95Cond= conditional_effects(modq10q95, effects = "intact_std:eli_tau_std", p
 q10q95CondPlot = plot(q10q95Cond)[[1]] +
   xlab("Intactness") +
   ylab("(Q10-Q95)/Area") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 q10q95CondPlot
 
@@ -726,10 +745,11 @@ q10q95Marg <- modq10q95%>%
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
 
-ggq10q95 = ggplot(q10q95Marg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggq10q95 = ggplot(q10q95Marg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -737,6 +757,7 @@ ggq10q95 = ggplot(q10q95Marg, aes(x = .value, y = fct_rev(name), fill = componen
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
  # ggtitle("(Q10-Q95)/Area")
 
@@ -770,8 +791,9 @@ max30Cond= conditional_effects(modMax30, effects = "intact_std:eli_tau_std", pro
 max30CondPlot = plot(max30Cond)[[1]] +
   xlab("Intactness") +
   ylab("Max 30/Area") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols, , labels = c("Water", "Neutral", "Energy")) +
+  scale_fill_manual(values = cols, labels = c("Water", "Neutral", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")
 max30CondPlot
 
@@ -788,10 +810,11 @@ max30Marg <- modMax30%>%
     endsWith(.variable, "intact_std") ~ "Intactness",
     endsWith(.variable, "intact_std:eli_tau_std") ~ "Intactness*ELI", 
     endsWith(.variable, "eli_tau_std") ~ "ELI")) %>%
+  mutate(eliCol = if_else(name == "ELI" | name == "Intactness*ELI", 1, 0)) %>%
   filter(.variable != "b_Intercept")
 
 
-ggmax30 = ggplot(max30Marg, aes(x = .value, y = fct_rev(name), fill = component)) +
+ggmax30 = ggplot(max30Marg, aes(x = .value, y = fct_rev(name), fill = eliCol)) +
   geom_vline(xintercept = 0) +
   stat_halfeye(aes(slab_alpha = intercept), 
                .width = c(0.89), point_interval = "median_hdi") +
@@ -799,6 +822,7 @@ ggmax30 = ggplot(max30Marg, aes(x = .value, y = fct_rev(name), fill = component)
   scale_slab_alpha_discrete(range = c(1, 0.4)) +
   guides(fill = "none", slab_alpha = "none") +
   labs(x = "Effect size", y = "Variable") +
+  theme_classic() +
   facet_wrap(vars(component), ncol = 1, scales = "free_y")#+
   #ggtitle("Max 30/Area")
 
@@ -825,13 +849,15 @@ cond6 = ggarrange(baseCondPlot, dryAreaCondPlot, q10q95CondPlot, max30CondPlot,
 cond6
 
 ## Only baseflow and Flashiness
+cols2 =  c("#D2A06F", "#6FA38A")
 conds = list(eli_tau_std = c(-1,1))
 baseCondConcept = conditional_effects(modBASE, effects = "intact_std:eli_tau_std", int_conditions =conds , prob = 0.89)
 baseCondPlotConcept = plot(baseCondConcept)[[1]] +
   xlab("Intactness") +
   ylab("Baseflow") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols2, , labels = c("Water",  "Energy")) +
+  scale_fill_manual(values = cols2, labels = c("Water", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
@@ -844,8 +870,9 @@ flashCondConcept = conditional_effects(modFlash, effects = "intact_std:eli_tau_s
 flashCondPlotConcept = plot(flashCondConcept)[[1]] +
   xlab("Intactness") +
   ylab("Flashiness") +
-  scale_color_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
-  scale_fill_viridis_d(option = "D", end = 0.9, labels = c("Water", "Neutral", "Energy"), direction = -1) +
+  theme_classic() +
+  scale_color_manual(values = cols2, , labels = c("Water", "Energy")) +
+  scale_fill_manual(values = cols2, labels = c("Water", "Energy")) +
   labs(color = "Limitation", fill = "Limitation")+
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
